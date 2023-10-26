@@ -15,7 +15,6 @@ impl State {
 
         for l in 0..L {
             for c in 0..C {
-                if self.board[l][c] != 0 { continue; } // FIXME: maybe it will improve cache locality if we only set (to 0) and check self.pos
                 let length = self.pos[l][c] & 63; // Extract last 6 bits
                 if length < min_value && length > 0 {
                     min_value = length;
@@ -27,7 +26,7 @@ impl State {
         min_position
     }
 
-    fn get_options_for_cell(&self, l: usize, c: usize) -> Vec<usize> {
+    fn get_options_for_cell(&self, l: usize, c: usize) -> Vec<u8> {
         if l >= L || c >= C {
             panic!("Out of bounds");
         }
@@ -42,10 +41,18 @@ impl State {
     }
 
     // Removes a specific option and sets the opt array to all zeros
-
     fn clear_opt_at(&mut self, l: usize, c: usize) {
         if c < C && l < L {
             self.pos[l][c] = 0;
+        } else {
+            panic!("Out of bounds or invalid index");
+        }
+    }
+
+    fn set_board(&mut self, l: usize, c: usize, v: u8) {
+        if c < C && l < L {
+            self.board[l][c] = v;
+            self.clear_opt_at(l, c);
         } else {
             panic!("Out of bounds or invalid index");
         }
@@ -162,12 +169,12 @@ fn main() {
     queue.push_back(begin_state);
 
     while !queue.is_empty() {
-        let cur:State = queue.pop_front().unwrap();
+        let cur: State = queue.pop_front().unwrap();
         let (l, c) = cur.find_min_options_position();
-        for opt in cur.get_options_for_cell(l, c) {
+        for v in cur.get_options_for_cell(l, c) {
             let mut new_state = cur.clone();
 
-            new_state.board[l][c] = opt as u8;
+            new_state.set_board(l, c, v);
 
             if new_state.is_full() {
                 new_state.print();
@@ -176,7 +183,7 @@ fn main() {
 
             new_state.update_pos();
             queue.push_front(new_state);
-
+        }
     }
 
 }
